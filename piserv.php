@@ -134,7 +134,7 @@ class Piserv_Image extends Piserv_Base{
     if($x_ratio * $ch < $dh){
       return array($dw, ceil($x_ratio * $ch), $cw, $ch);
     } else {
-      return array(ceil($y_ratio * $cw), $dw, $cw, $ch);
+      return array(ceil($y_ratio * $cw), $dh, $cw, $ch);
     }
   }
 
