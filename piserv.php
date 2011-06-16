@@ -3,14 +3,14 @@
 class Piserv_Base{
 
   private $_query = array();
+  protected $config = array();
   protected $routes = array();
 
-  function __construct($routes, $query = FALSE){
+  public function __construct($routes, $query = FALSE){
     if (!$get){
       $this->_query = $_SERVER["QUERY_STRING"];
     }
     $this->routes = $routes;
-    print_r($this->_query);
   }
 
   private function processParams($config, $matches){
@@ -25,23 +25,60 @@ class Piserv_Base{
     return $config;
   }
 
+  protected function error($code, $message){
+    //TODO: Handle errors;
+    echo $code . ' ' . $message;
+  }
+
+  protected function not_found(){
+    $this->error(404, 'File not found');
+  }
+
+  protected function default_action(){
+    $this->error(500, '');
+  }
+
   private function route(){
     foreach ($this->routes as $match => $config){
       //match route
       if (preg_match($match, $this->_query, $matches)){
         if (count($matches) > 1){
           $conf = $this->processParams($config, $matches);
-          print_r($conf);
+          $this->config = $conf;
+          return TRUE;
         }
-        break;
       }
     }
+    return FALSE;
   }
 
   public function process(){
-    $this->route();
+    $found = $this->route();
+    if ($found){
+      if (isset($this->config['action'])){
+        $action = $this->config['action'];
+        if (method_exists($this, $action)){
+          $this->$action($this->config);
+        } else {
+          $this->error(500, 'Method not defined');
+        }
+      } else {
+        $this->default_action();
+      }
+    } else {
+      $this->not_found();
+    }
   }
 
 }
+
+class Piserv_Image extends Piserv_Base{
+
+  protected function resize($config){
+    print_r($config);
+  }
+
+}
+
 
 ?>
