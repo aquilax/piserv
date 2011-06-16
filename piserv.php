@@ -60,6 +60,13 @@ class Piserv_Base{
     return FALSE;
   }
 
+  private function validate(){
+    //TODO More validation is needed here
+    $q = $this->_query;
+    $this->_query = str_replace(array('..', ':', '<', '>'), '', $q);
+    return TRUE;
+  }
+
   private function route(){
     foreach ($this->routes as $match => $config){
       //match route
@@ -75,17 +82,22 @@ class Piserv_Base{
   }
 
   public function process(){
-    $found = $this->route();
-    if ($found){
-      if (isset($this->config['action'])){
-        $action = $this->config['action'];
-        if (method_exists($this, $action)){
-          $this->$action($this->config);
+    $valid = $this->validate();
+    if ($valid){
+      $found = $this->route();
+      if ($found){
+        if (isset($this->config['action'])){
+          $action = $this->config['action'];
+          if (method_exists($this, $action)){
+            $this->$action($this->config);
+          } else {
+            $this->error(500, 'Method not defined');
+          }
         } else {
-          $this->error(500, 'Method not defined');
+          $this->default_action();
         }
       } else {
-        $this->default_action();
+        $this->not_found();
       }
     } else {
       $this->not_found();
@@ -95,6 +107,55 @@ class Piserv_Base{
 }
 
 class Piserv_Image extends Piserv_Base{
+
+  protected $imagesize = null;
+
+  protected function getImageType(){
+    $is = getimagesize($this->source);
+    if ($is){
+      $this->imagesize = $is;
+      return $is['mime'];
+    }
+    $this->error(404, 'Image not found');
+  }
+
+  protected function getNewSize(){
+    $dw = $this->config['w']; // desired width
+    $dh = $this->config['h']; //desired height
+    $cw = $this->imagesize[0]; //current width
+    $ch = $this->imagesize[1]; //current height
+    $dw = ($dw > $cw)?$cw:$dw; // don't make the image wider
+    $dh = ($dh > $ch)?$ch:$dh; // don't make the image higher
+
+    $x_ratio = ($dw / $cw);
+    $y_ratio = ($dh / $ch);
+
+    //Calculate the new size
+    if($x_ratio * $ch < $dh){
+      return array($dw, ceil($x_ratio * $ch), $cw, $ch);
+    } else {
+      return array(ceil($y_ratio * $cw), $dw, $cw, $ch);
+    }
+  }
+
+  protected function processImage($function_name){
+    $isource = $function_name($this->source);
+    list($new_w, $new_h, $old_w, $old_h) = $this->getNewSize();
+    $idestination = imagecreatetruecolor($new_w, $new_h);
+    imagecopyresampled($idestination, $isource, 0, 0, 0, 0, $new_w, $new_h, $old_w, $old_h);
+    unset($isource);
+    return $idestination;
+  }
+
+  protected function save($image, $output_function){
+    return TRUE;
+    return $output_function($image, $this->destination.'/'.$this->file_name);
+  }
+
+  protected function stream($image, $output_function, $image_type){
+    header(sprintf('Content-Type: %s', $image_type));
+    $output_function($image);
+  }
 
   protected function resize($config){
     $this->source = realpath($this->images_base.basename($this->_query));
@@ -106,6 +167,19 @@ class Piserv_Image extends Piserv_Base{
     $dest = $this->base_path.dirname($this->_query);
     if ($this->forceDir($dest)){
       $this->destination = realpath($dest);
+      $image_type = $this->getImageType();
+      switch ($image_type){
+        case 'image/png' : $process_function = 'imagecreatefrompng'; $output_function = 'imagepng'; break;
+        case 'image/gif' : $process_function = 'imagecreatefromgif'; $output_function = 'imagegif'; break;
+        case 'image/jpeg': $process_function = 'imagecreatefromjpeg'; $output_function = 'imagejpeg'; break;
+        default: $this->error(500, 'Image not supported');
+      }
+      $image = $this->processImage($process_function);
+      if ($this->save($image, $output_function)){
+        $this->stream($image, $output_function, $image_type);
+      } else {
+        $this->error('500', 'Cannot create image');
+      }
     }
   }
 
