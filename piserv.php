@@ -2,15 +2,17 @@
 
 class Piserv_Base{
 
-  private $_query = array();
+  protected $_query = array();
   protected $config = array();
   protected $routes = array();
+  protected $images_base = '';
 
-  public function __construct($routes, $query = FALSE){
+  public function __construct($routes, $images_base, $query = FALSE){
     if (!$get){
       $this->_query = $_SERVER["QUERY_STRING"];
     }
     $this->routes = $routes;
+    $this->images_base = $images_base;
   }
 
   private function processParams($config, $matches){
@@ -28,6 +30,7 @@ class Piserv_Base{
   protected function error($code, $message){
     //TODO: Handle errors;
     echo $code . ' ' . $message;
+    die();
   }
 
   protected function not_found(){
@@ -36,6 +39,25 @@ class Piserv_Base{
 
   protected function default_action(){
     $this->error(500, '');
+  }
+
+  protected function forceDir($dest){
+    if (file_exists($dest)){
+      if (is_file($dest)){
+        $this->error(500, 'Cannot create directory');
+        return FALSE;
+      } else {
+        return TRUE;
+      }
+    } else {
+      if (mkdir($dest, 0665, TRUE)){
+        return TRUE;
+      } else {
+        $this->error(500, 'Cannot create directory');
+        return FALSE;
+      }
+    }
+    return FALSE;
   }
 
   private function route(){
@@ -75,7 +97,16 @@ class Piserv_Base{
 class Piserv_Image extends Piserv_Base{
 
   protected function resize($config){
-    print_r($config);
+    $this->source = realpath($this->images_base.basename($this->_query));
+    if (!file_exists($this->source)){
+      $this->not_found();
+    }
+    $this->file_name = basename($this->source);
+    $this->base_path = pathinfo(__FILE__, PATHINFO_DIRNAME);
+    $dest = $this->base_path.dirname($this->_query);
+    if ($this->forceDir($dest)){
+      $this->destination = realpath($dest);
+    }
   }
 
 }

@@ -10,7 +10,7 @@ $routes = array(
   ),
 );
 
-$is = new Piserv_Image($routes);
+$is = new Piserv_Image($routes, '_i/');
 $is->process();
 
 ?>
