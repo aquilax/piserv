@@ -108,22 +108,27 @@ class Piserv_Base{
 
 class Piserv_Image extends Piserv_Base{
 
-  protected $imagesize = null;
+  protected $width = 0;
+  protected $height = 0;
+  protected $mime = '';
 
-  protected function getImageType(){
+  protected function getImageInfo(){
     $is = getimagesize($this->source);
     if ($is){
-      $this->imagesize = $is;
-      return $is['mime'];
+      $this->width = $is[0];
+      $this->height = $is[1];
+      $this->mime = $is['mime'];
+      return TRUE;
     }
     $this->error(404, 'Image not found');
+    return FALSE;
   }
 
   protected function getNewSize(){
-    $dw = $this->config['w']; // desired width
-    $dh = $this->config['h']; //desired height
-    $cw = $this->imagesize[0]; //current width
-    $ch = $this->imagesize[1]; //current height
+    $dw = $this->config['width']; // desired width
+    $dh = $this->config['height']; //desired height
+    $cw = $this->width; //current width
+    $ch = $this->height; //current height
     $dw = ($dw > $cw)?$cw:$dw; // don't make the image wider
     $dh = ($dh > $ch)?$ch:$dh; // don't make the image higher
 
@@ -132,17 +137,17 @@ class Piserv_Image extends Piserv_Base{
 
     //Calculate the new size
     if($x_ratio * $ch < $dh){
-      return array($dw, ceil($x_ratio * $ch), $cw, $ch);
+      return array($dw, ceil($x_ratio * $ch));
     } else {
-      return array(ceil($y_ratio * $cw), $dh, $cw, $ch);
+      return array(ceil($y_ratio * $cw), $dh);
     }
   }
 
   protected function processImage($function_name){
     $isource = $function_name($this->source);
-    list($new_w, $new_h, $old_w, $old_h) = $this->getNewSize();
+    list($new_w, $new_h) = $this->getNewSize();
     $idestination = imagecreatetruecolor($new_w, $new_h);
-    imagecopyresampled($idestination, $isource, 0, 0, 0, 0, $new_w, $new_h, $old_w, $old_h);
+    imagecopyresampled($idestination, $isource, 0, 0, 0, 0, $new_w, $new_h, $this->width, $this->height);
     unset($isource);
     return $idestination;
   }
@@ -152,8 +157,8 @@ class Piserv_Image extends Piserv_Base{
     return $output_function($image, $this->destination.'/'.$this->file_name);
   }
 
-  protected function stream($image, $output_function, $image_type){
-    header(sprintf('Content-Type: %s', $image_type));
+  protected function stream($image, $output_function){
+    header(sprintf('Content-Type: %s', $this->mime));
     $output_function($image);
   }
 
@@ -167,16 +172,18 @@ class Piserv_Image extends Piserv_Base{
     $dest = $this->base_path.dirname($this->_query);
     if ($this->forceDir($dest)){
       $this->destination = realpath($dest);
-      $image_type = $this->getImageType();
-      switch ($image_type){
+      if(!$this->getImageInfo()){
+        $this->error('500', 'Cannot read image');
+      }
+      switch ($this->mime){
         case 'image/png' : $process_function = 'imagecreatefrompng'; $output_function = 'imagepng'; break;
         case 'image/gif' : $process_function = 'imagecreatefromgif'; $output_function = 'imagegif'; break;
         case 'image/jpeg': $process_function = 'imagecreatefromjpeg'; $output_function = 'imagejpeg'; break;
-        default: $this->error(500, 'Image not supported');
+        default: $this->error(500, 'Image type not supported');
       }
       $image = $this->processImage($process_function);
       if ($this->save($image, $output_function)){
-        $this->stream($image, $output_function, $image_type);
+        $this->stream($image, $output_function);
       } else {
         $this->error('500', 'Cannot create image');
       }
