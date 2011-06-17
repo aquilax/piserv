@@ -1,4 +1,36 @@
 <?php
+/**
+ * Project: piserv : php script for serving and dynamically creting static files
+ * File name: piserv.php
+ * Description:  piserv is standalone PHP script for serving and manipulationg static content
+ *   
+ * @author Evgeni Vaslev aquilax@gmail.com.
+ * @version 0.1
+ *   
+ * @see The GNU Public License (GPL)
+ */
+
+/** 
+ * This program is free software; you can redistribute it and/or modify 
+ * it under the terms of the GNU General Public License as published by 
+ * the Free Software Foundation; either version 2 of the License, or 
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+ * for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along 
+ * with this program; if not, write to the Free Software Foundation, Inc., 
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+
+/**
+ * piserv base class
+ *
+ */
 
 class Piserv_Base{
 
@@ -50,7 +82,7 @@ class Piserv_Base{
         return TRUE;
       }
     } else {
-      if (mkdir($dest, 0665, TRUE)){
+      if (mkdir($dest, 0755, TRUE)){
         return TRUE;
       } else {
         $this->error(500, 'Cannot create directory');
@@ -106,6 +138,11 @@ class Piserv_Base{
 
 }
 
+
+/**
+  * Piserv image manipulation class
+  *
+  */
 class Piserv_Image extends Piserv_Base{
 
   protected $width = 0;
@@ -153,7 +190,6 @@ class Piserv_Image extends Piserv_Base{
   }
 
   protected function save($image, $output_function){
-    return TRUE;
     return $output_function($image, $this->destination.'/'.$this->file_name);
   }
 
