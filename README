@@ -2,3 +2,11 @@ piserv
 ===================
 
 piserv is image serving and resizing server script.
+
+Installation
+===================
+
+1. Place the files in empty directory.
+2. Create a directory for the original images ("_i" in the sample index.php file);
+3. Edit the index.php file's routes to match your requirements;
+4. Start putting images in the originals directory;
