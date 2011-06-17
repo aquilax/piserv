@@ -1,3 +1,8 @@
+ExpiresActive On
+ExpiresByType image/gif A62208000
+ExpiresByType image/png A62208000
+ExpiresByType image/jpg A62208000
+
 RewriteEngine on
 
 RewriteCond %{REQUEST_FILENAME} !-f
