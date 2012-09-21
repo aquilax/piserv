@@ -40,7 +40,8 @@ class Piserv_Base{
   protected $images_base = '';
 
   public function __construct($routes, $images_base, $query = FALSE){
-    if (!$get){
+    $this->_query = $query;
+    if (!$this->_query){
       $this->_query = $_SERVER["QUERY_STRING"];
     }
     $this->routes = $routes;
